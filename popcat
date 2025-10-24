@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Popcat Clicker</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .container {
+      text-align: center;
+      z-index: 10;
+    }
+
+    .popcat {
+      width: 200px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .popcat.open {
+      transform: scale(1.05);
+    }
+
+    .counter {
+      font-size: 2rem;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    .mini-popcat {
+      position: absolute;
+      width: 40px;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 0.7; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://i.imgur.com/6HkYr0y.png" alt="Popcat" class="popcat" id="popcat" />
+    <div class="counter" id="counter">0</div>
+  </div>
+
+  <!-- 사운드 -->
+  <audio id="popSound" src="https://assets.mixkit.co/sfx/preview/mixkit-quick-jump-arcade-game-239.mp3" preload="auto"></audio>
+
+  <script>
+    const popcat = document.getElementById('popcat');
+    const counter = document.getElementById('counter');
+    const popSound = document.getElementById('popSound');
+    let count = 0;
+
+    // Popcat 클릭 이벤트
+    popcat.addEventListener('click', () => {
+      // 입 벌리기 (클래스 추가)
+      popcat.classList.add('open');
+
+      // 소리 재생
+      popSound.currentTime = 0;
+      popSound.play();
+
+      // 입 닫기 (0.1초 후)
+      setTimeout(() => {
+        popcat.classList.remove('open');
+      }, 100);
+
+      // 카운터 증가
+      count++;
+      counter.textContent = count;
+
+      // 100단위마다 작은 popcat 생성
+      if (count % 100 === 0) {
+        createMiniPopcat();
+      }
+    });
+
+    // 작은 popcat 생성 함수
+    function createMiniPopcat() {
+      const mini = document.createElement('img');
+      mini.src = "https://i.imgur.com/6HkYr0y.png";
+      mini.classList.add('mini-popcat');
+
+      // 랜덤 위치 (화면 내)
+      const x = Math.random() * window.innerWidth;
+      const y = Math.random() * window.innerHeight;
+
+      mini.style.left = `${x}px`;
+      mini.style.top = `${y}px`;
+
+      document.body.appendChild(mini);
+
+      // 애니메이션 끝나면 제거 (선택사항)
+      setTimeout(() => {
+        mini.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
