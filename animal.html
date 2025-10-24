@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고양이 클릭 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: white;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+            z-index: 10;
+        }
+
+        #main-cat {
+            font-size: calc(100vh / 3);
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        #main-cat:active {
+            transform: scale(0.95);
+        }
+
+        #counter {
+            font-size: 48px;
+            font-weight: bold;
+            margin-top: 20px;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        .small-cat {
+            position: absolute;
+            font-size: calc(100vh / 6);
+            user-select: none;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .rotating {
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .speed-2x {
+            animation-duration: 2s;
+        }
+
+        .speed-4x {
+            animation-duration: 1s;
+        }
+
+        .speed-8x {
+            animation-duration: 0.5s;
+        }
+
+        .speed-16x {
+            animation-duration: 0.25s;
+        }
+
+        .speed-32x {
+            animation-duration: 0.125s;
+        }
+
+        .speed-64x {
+            animation-duration: 0.0625s;
+        }
+
+        #hint {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 14px;
+            color: #999;
+            z-index: 5;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="background-cats"></div>
+    
+    <div id="game-container">
+        <div id="main-cat">😺</div>
+        <div id="counter">0</div>
+    </div>
+
+    <div id="hint">10회, 60회마다 새로운 이벤트가 나타납니다.</div>
+
+    <script>
+        let count = 0;
+        let lastMilestone = 0;
+        const mainCat = document.getElementById('main-cat');
+        const counter = document.getElementById('counter');
+        const backgroundCats = document.getElementById('background-cats');
+
+        // 다양한 작은 동물 이모지 목록
+        const animals = ['😺', '🐱', '🐶', '🐕', '🐟', '🐠', '🐊', '🐵', '🐒', '🐭', '🐹', '🐰', '🐸', '🐢', '🦊', '🐼'];
+
+        // 팝 소리 생성 (Web Audio API 사용)
+        function playPopSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // 작은 동물 생성 (랜덤 동물)
+        function createSmallCat() {
+            const smallCat = document.createElement('div');
+            smallCat.className = 'small-cat';
+            // 랜덤 동물 이모지 선택
+            smallCat.textContent = animals[Math.floor(Math.random() * animals.length)];
+            
+            // 랜덤 위치 (화면 전체, 단 중앙 영역은 피함)
+            const x = Math.random() * (window.innerWidth - 100);
+            const y = Math.random() * (window.innerHeight - 100);
+            
+            smallCat.style.left = x + 'px';
+            smallCat.style.top = y + 'px';
+            
+            backgroundCats.appendChild(smallCat);
+            
+            // 회전 속도 업데이트
+            updateRotationSpeed();
+        }
+
+        // 회전 속도 업데이트
+        function updateRotationSpeed() {
+            const smallCats = document.querySelectorAll('.small-cat');
+            const catCount = smallCats.length;
+            
+            smallCats.forEach(cat => {
+                // 기존 클래스 제거
+                cat.classList.remove('rotating', 'speed-2x', 'speed-4x', 'speed-8x', 'speed-16x', 'speed-32x', 'speed-64x');
+                
+                if (catCount >= 3) {
+                    cat.classList.add('rotating');
+                    
+                    // 3마리부터 시작, 5마리씩 증가할 때마다 속도 2배
+                    // 3-7: 기본속도, 8-12: 2배, 13-17: 4배, ...
+                    const speedLevel = Math.floor((catCount - 3) / 5);
+                    
+                    if (speedLevel >= 1) cat.classList.add('speed-2x');
+                    if (speedLevel >= 2) {
+                        cat.classList.remove('speed-2x');
+                        cat.classList.add('speed-4x');
+                    }
+                    if (speedLevel >= 3) {
+                        cat.classList.remove('speed-4x');
+                        cat.classList.add('speed-8x');
+                    }
+                    if (speedLevel >= 4) {
+                        cat.classList.remove('speed-8x');
+                        cat.classList.add('speed-16x');
+                    }
+                    if (speedLevel >= 5) {
+                        cat.classList.remove('speed-16x');
+                        cat.classList.add('speed-32x');
+                    }
+                    if (speedLevel >= 6) {
+                        cat.classList.remove('speed-32x');
+                        cat.classList.add('speed-64x');
+                    }
+                }
+            });
+        }
+
+        // 고양이 클릭 이벤트
+        mainCat.addEventListener('click', () => {
+            count++;
+            counter.textContent = count;
+            
+            // 입 벌리기 애니메이션
+            mainCat.textContent = '😸';
+            setTimeout(() => {
+                mainCat.textContent = '😺';
+            }, 100);
+            
+            // 팝 소리
+            playPopSound();
+            
+            // 10의 배수마다 작은 동물 생성
+            if (count % 10 === 0 && count > lastMilestone) {
+                createSmallCat();
+                lastMilestone = count;
+            }
+        });
+    </script>
+</body>
+</html>
