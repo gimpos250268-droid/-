@@ -1,117 +1,213 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Popcat Clicker</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background-color: #f0f0f0;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-      position: relative;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고양이 클릭 게임</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .container {
-      text-align: center;
-      z-index: 10;
-    }
+        body {
+            background-color: white;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
 
-    .popcat {
-      width: 200px;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+            z-index: 10;
+        }
 
-    .popcat.open {
-      transform: scale(1.05);
-    }
+        #main-cat {
+            font-size: calc(100vh / 3);
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
 
-    .counter {
-      font-size: 2rem;
-      margin-top: 20px;
-      color: #333;
-    }
+        #main-cat:active {
+            transform: scale(0.95);
+        }
 
-    .mini-popcat {
-      position: absolute;
-      width: 40px;
-      opacity: 0;
-      animation: fadeIn 0.5s forwards;
-    }
+        #counter {
+            font-size: 48px;
+            font-weight: bold;
+            margin-top: 20px;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.5); }
-      to { opacity: 0.7; transform: scale(1); }
-    }
-  </style>
+        .small-cat {
+            position: absolute;
+            font-size: calc(100vh / 6);
+            user-select: none;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .rotating {
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .speed-2x {
+            animation-duration: 2s;
+        }
+
+        .speed-4x {
+            animation-duration: 1s;
+        }
+
+        .speed-8x {
+            animation-duration: 0.5s;
+        }
+
+        .speed-16x {
+            animation-duration: 0.25s;
+        }
+
+        .speed-32x {
+            animation-duration: 0.125s;
+        }
+
+        .speed-64x {
+            animation-duration: 0.0625s;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <img src="https://i.imgur.com/6HkYr0y.png" alt="Popcat" class="popcat" id="popcat" />
-    <div class="counter" id="counter">0</div>
-  </div>
+    <div id="background-cats"></div>
+    
+    <div id="game-container">
+        <div id="main-cat">😺</div>
+        <div id="counter">0</div>
+    </div>
 
-  <!-- 사운드 -->
-  <audio id="popSound" src="https://assets.mixkit.co/sfx/preview/mixkit-quick-jump-arcade-game-239.mp3" preload="auto"></audio>
+    <script>
+        let count = 0;
+        let lastMilestone = 0;
+        const mainCat = document.getElementById('main-cat');
+        const counter = document.getElementById('counter');
+        const backgroundCats = document.getElementById('background-cats');
 
-  <script>
-    const popcat = document.getElementById('popcat');
-    const counter = document.getElementById('counter');
-    const popSound = document.getElementById('popSound');
-    let count = 0;
+        // 팝 소리 생성 (Web Audio API 사용)
+        function playPopSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-    // Popcat 클릭 이벤트
-    popcat.addEventListener('click', () => {
-      // 입 벌리기 (클래스 추가)
-      popcat.classList.add('open');
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
 
-      // 소리 재생
-      popSound.currentTime = 0;
-      popSound.play();
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
 
-      // 입 닫기 (0.1초 후)
-      setTimeout(() => {
-        popcat.classList.remove('open');
-      }, 100);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
 
-      // 카운터 증가
-      count++;
-      counter.textContent = count;
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
 
-      // 100단위마다 작은 popcat 생성
-      if (count % 100 === 0) {
-        createMiniPopcat();
-      }
-    });
+        // 작은 고양이 생성
+        function createSmallCat() {
+            const smallCat = document.createElement('div');
+            smallCat.className = 'small-cat';
+            smallCat.textContent = '😺';
+            
+            // 랜덤 위치 (화면 전체, 단 중앙 영역은 피함)
+            const x = Math.random() * (window.innerWidth - 100);
+            const y = Math.random() * (window.innerHeight - 100);
+            
+            smallCat.style.left = x + 'px';
+            smallCat.style.top = y + 'px';
+            
+            backgroundCats.appendChild(smallCat);
+            
+            // 회전 속도 업데이트
+            updateRotationSpeed();
+        }
 
-    // 작은 popcat 생성 함수
-    function createMiniPopcat() {
-      const mini = document.createElement('img');
-      mini.src = "https://i.imgur.com/6HkYr0y.png";
-      mini.classList.add('mini-popcat');
+        // 회전 속도 업데이트
+        function updateRotationSpeed() {
+            const smallCats = document.querySelectorAll('.small-cat');
+            const catCount = smallCats.length;
+            
+            smallCats.forEach(cat => {
+                // 기존 클래스 제거
+                cat.classList.remove('rotating', 'speed-2x', 'speed-4x', 'speed-8x', 'speed-16x', 'speed-32x', 'speed-64x');
+                
+                if (catCount >= 3) {
+                    cat.classList.add('rotating');
+                    
+                    // 3마리부터 시작, 5마리씩 증가할 때마다 속도 2배
+                    // 3-7: 기본속도, 8-12: 2배, 13-17: 4배, ...
+                    const speedLevel = Math.floor((catCount - 3) / 5);
+                    
+                    if (speedLevel >= 1) cat.classList.add('speed-2x');
+                    if (speedLevel >= 2) {
+                        cat.classList.remove('speed-2x');
+                        cat.classList.add('speed-4x');
+                    }
+                    if (speedLevel >= 3) {
+                        cat.classList.remove('speed-4x');
+                        cat.classList.add('speed-8x');
+                    }
+                    if (speedLevel >= 4) {
+                        cat.classList.remove('speed-8x');
+                        cat.classList.add('speed-16x');
+                    }
+                    if (speedLevel >= 5) {
+                        cat.classList.remove('speed-16x');
+                        cat.classList.add('speed-32x');
+                    }
+                    if (speedLevel >= 6) {
+                        cat.classList.remove('speed-32x');
+                        cat.classList.add('speed-64x');
+                    }
+                }
+            });
+        }
 
-      // 랜덤 위치 (화면 내)
-      const x = Math.random() * window.innerWidth;
-      const y = Math.random() * window.innerHeight;
-
-      mini.style.left = `${x}px`;
-      mini.style.top = `${y}px`;
-
-      document.body.appendChild(mini);
-
-      // 애니메이션 끝나면 제거 (선택사항)
-      setTimeout(() => {
-        mini.remove();
-      }, 3000);
-    }
-  </script>
+        // 고양이 클릭 이벤트
+        mainCat.addEventListener('click', () => {
+            count++;
+            counter.textContent = count;
+            
+            // 입 벌리기 애니메이션
+            mainCat.textContent = '😸';
+            setTimeout(() => {
+                mainCat.textContent = '😺';
+            }, 100);
+            
+            // 팝 소리
+            playPopSound();
+            
+            // 20의 배수마다 작은 고양이 생성
+            if (count % 20 === 0 && count > lastMilestone) {
+                createSmallCat();
+                lastMilestone = count;
+            }
+        });
+    </script>
 </body>
 </html>
